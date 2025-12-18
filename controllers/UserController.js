@@ -1,0 +1,149 @@
+import User from "../models/UserModel.js";
+import ApiError from "../utils/ApiError.js";
+import ApiResponse from "../utils/ApiResponse.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { generateToken, genrateOtp } from "../utils/commonFunctions.js";
+import bcrypt from "bcrypt";
+
+
+export const registerUser = asyncHandler(async (req, res) => {
+  const {
+    name,
+    userEmail,
+    password,
+    type,
+    location,
+    phone,
+    countryCode,
+    language,
+  } = req.body;
+  if (type === "email") {
+    const existingUser = await User.findOne({ userEmail });
+    if (existingUser) {
+      return res.status(400).json(new ApiResponse(400, "User already exists"));
+    }
+    const user = new User({
+      name,
+      location,
+      userEmail,
+      password,
+      language,
+      isRegistered: true,
+    });
+
+    await user.save();
+    const token = generateToken(user._id);
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, "User registered successfully", { user, token })
+      );
+  } else if (type === "phone") {
+    const existingUser = await User.findOne({ phone, countryCode });
+    const otp = genrateOtp();
+    if (existingUser) {
+      existingUser.otp = otp;
+      existingUser.otpVerified = false;
+      await existingUser.save();
+      return res
+        .status(200)
+        .json(new ApiResponse(200, "Otp sent successfully", existingUser.otp));
+    }
+    await User.create({
+      phone,
+      countryCode,
+      otp: String(otp),
+      otpVerified: false,
+    });
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Otp sent successfully", otp));
+  }
+});
+
+export const verifyOtp = asyncHandler(async (req, res) => {
+  const { phone, countryCode, otp } = req.body;
+  const user = await User.findOne({ phone, countryCode });
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  if (user.otpVerified) {
+    throw new ApiError(400, "OTP already verified");
+  }
+
+  if (!user.otp || user.otp !== String(otp)) {
+    throw new ApiError(400, "Invalid OTP");
+  }
+
+  user.isVerified = true;
+  user.otp = null;
+  await user.save();
+
+  const token = user.isRegistered ? generateToken(user._id) : null;
+  return res.status(200).json(
+    new ApiResponse(200, "User verified successfully", {
+      userExist: user.isRegistered,
+      token,
+    })
+  );
+});
+
+export const completeRegistration = asyncHandler(async (req, res) => {
+  const { name, location, language, phone, countryCode } = req.body;
+
+  const user = await User.findOne({ phone, countryCode });
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  if (user.isRegistered) {
+    throw new ApiError(400, "User already registered");
+  }
+
+  user.name = name;
+  user.location = location;
+  user.language = language;
+  user.isRegistered = true;
+  await user.save();
+
+  const token = generateToken(user._id);
+  return res.status(200).json(
+    new ApiResponse(200, "User registered successfully", {
+      userExist: user.isRegistered,
+      token,
+    })
+  );
+});
+
+export const loginUser = asyncHandler(async (req, res) => {
+  const { userEmail, password } = req.body;
+  const user = await User.findOne({ userEmail });
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  if (!user.isRegistered) {
+    throw new ApiError(400, "User not registered");
+  }
+
+  const isPasswordMatch = await bcrypt.compare(password, user.password);
+  if (!isPasswordMatch) {
+    throw new ApiError(401, "Invalid credentials");
+  }
+
+  const token = generateToken(user._id);
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "User logged in successfully", { user, token }));
+});
+
+export const getUserById = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const user = await User.findById(userId).select("-password");
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+  return res.status(200).json(new ApiResponse(200, "User found", user));
+});

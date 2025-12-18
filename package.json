@@ -1,0 +1,33 @@
+{
+  "name": "bantu24_backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/logicalsofttech2023/Bantu24_Backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/logicalsofttech2023/Bantu24_Backend/issues"
+  },
+  "homepage": "https://github.com/logicalsofttech2023/Bantu24_Backend#readme",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.0.1",
+    "multer": "^2.0.2",
+    "zod": "^4.2.1"
+  }
+}
