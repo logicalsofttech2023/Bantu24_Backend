@@ -5,7 +5,6 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { generateToken, genrateOtp } from "../utils/commonFunctions.js";
 import bcrypt from "bcrypt";
 
-
 export const registerUser = asyncHandler(async (req, res) => {
   const {
     name,
@@ -16,12 +15,15 @@ export const registerUser = asyncHandler(async (req, res) => {
     phone,
     countryCode,
     language,
+    loginType,
   } = req.body;
+
   if (type === "email") {
     const existingUser = await User.findOne({ userEmail });
     if (existingUser) {
       return res.status(400).json(new ApiResponse(400, "User already exists"));
     }
+    const file = req.file || req.files?.profileImage?.[0];
     const user = new User({
       name,
       location,
@@ -29,6 +31,8 @@ export const registerUser = asyncHandler(async (req, res) => {
       password,
       language,
       isRegistered: true,
+      profileImage: file?.filename || null,
+
     });
 
     await user.save();
@@ -39,82 +43,67 @@ export const registerUser = asyncHandler(async (req, res) => {
         new ApiResponse(200, "User registered successfully", { user, token })
       );
   } else if (type === "phone") {
-    const existingUser = await User.findOne({ phone, countryCode });
     const otp = genrateOtp();
-    if (existingUser) {
-      existingUser.otp = otp;
-      existingUser.otpVerified = false;
-      await existingUser.save();
+
+    if (loginType === "register") {
+      const existingUser = await User.findOne({ phone, countryCode });
+      if (existingUser) {
+        throw new ApiError(400, "User already exists");
+      }
+      await User.create({
+        phone,
+        countryCode,
+        otp: String(otp),
+        otpVerified: false,
+      });
+
       return res
         .status(200)
-        .json(new ApiResponse(200, "Otp sent successfully", existingUser.otp));
+        .json(new ApiResponse(200, "Otp sent successfully", otp));
+    } else if (loginType === "login") {
+      const existingUser = await User.findOne({ phone, countryCode });
+      existingUser.otp = String(otp);
+      existingUser.save();
+      if (existingUser) {
+        return res
+          .status(200)
+          .json(new ApiResponse(200, "Otp sent successfully", otp));
+      } else {
+        throw new ApiError(404, "User not registered please register first");
+      }
     }
-    await User.create({
-      phone,
-      countryCode,
-      otp: String(otp),
-      otpVerified: false,
-    });
-    return res
-      .status(200)
-      .json(new ApiResponse(200, "Otp sent successfully", otp));
   }
 });
 
 export const verifyOtp = asyncHandler(async (req, res) => {
-  const { phone, countryCode, otp } = req.body;
-  const user = await User.findOne({ phone, countryCode });
-  if (!user) {
-    throw new ApiError(404, "User not found");
-  }
+  const { phone, countryCode, otp, name, location, type, language } = req.body;
 
-  if (user.otpVerified) {
-    throw new ApiError(400, "OTP already verified");
-  }
+  const user = await User.findOne({ phone, countryCode });
+  const file = req.file || req.files?.profileImage?.[0];
 
   if (!user.otp || user.otp !== String(otp)) {
     throw new ApiError(400, "Invalid OTP");
   }
 
-  user.isVerified = true;
+  user.otpVerified = true;
   user.otp = null;
-  await user.save();
 
-  const token = user.isRegistered ? generateToken(user._id) : null;
-  return res.status(200).json(
-    new ApiResponse(200, "User verified successfully", {
-      userExist: user.isRegistered,
-      token,
-    })
-  );
-});
-
-export const completeRegistration = asyncHandler(async (req, res) => {
-  const { name, location, language, phone, countryCode } = req.body;
-
-  const user = await User.findOne({ phone, countryCode });
-
-  if (!user) {
-    throw new ApiError(404, "User not found");
+  if (type === "register") {
+    user.otpVerified = true;
+    user.isRegistered = true;
+    user.name = name;
+    user.location = location;
+    user.language = language;
+    user.profileImage = file?.filename || null;
   }
 
-  if (user.isRegistered) {
-    throw new ApiError(400, "User already registered");
-  }
-
-  user.name = name;
-  user.location = location;
-  user.language = language;
-  user.isRegistered = true;
   await user.save();
 
   const token = generateToken(user._id);
-  return res.status(200).json(
-    new ApiResponse(200, "User registered successfully", {
-      userExist: user.isRegistered,
-      token,
-    })
-  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "User verified successfully", { token }));
 });
 
 export const loginUser = asyncHandler(async (req, res) => {

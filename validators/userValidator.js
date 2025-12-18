@@ -12,4 +12,6 @@ export const registerUserSchema = z.object({
   countryCode: z.string().optional(),
   location: z.string().optional(),
   language: z.string().optional(),
+  loginType: z.string().optional(),
+  profileImage: z.string().optional(),
 });

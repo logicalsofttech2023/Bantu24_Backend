@@ -15,6 +15,7 @@ app.use(express.urlencoded({ extended: true }));
 connectDB();
 
 app.use("/api/v1/user", UserRoutes);
+app.use("/", (req, res) => res.send("Server is running"));
 app.use(errorMiddleware);
 
 app.listen(PORT, () => {
