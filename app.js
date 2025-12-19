@@ -5,6 +5,8 @@ import { errorMiddleware } from "./middleware/errorMiddleware.js";
 dotenv.config();
 import helmet from "helmet";
 import UserRoutes from "./routes/UserRoutes.js";
+import AdminRoutes from "./routes/adminRoutes.js";
+import VendorRoutes from "./routes/VendorRoutes.js";
 
 const PORT = process.env.PORT || 6008;
 
@@ -15,6 +17,8 @@ app.use(express.urlencoded({ extended: true }));
 connectDB();
 
 app.use("/api/v1/user", UserRoutes);
+app.use("/api/v1/vendor", VendorRoutes);
+app.use("/api/v1/admin", AdminRoutes);
 app.use("/", (req, res) => res.send("Server is running"));
 app.use(errorMiddleware);
 

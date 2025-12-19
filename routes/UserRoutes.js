@@ -11,4 +11,5 @@ router.post("/verifyOtp", uploadProfile.fields([{ name: "profileImage", maxCount
 router.post("/loginUser", loginUser);
 router.get("/getUserById", authMiddleware, getUserById);
 
+
 export default router;

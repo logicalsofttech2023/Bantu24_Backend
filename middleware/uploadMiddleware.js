@@ -1,7 +1,6 @@
 import multer from "multer";
 import path from "path";
 
-// Storage configuration for all uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads/");
@@ -11,7 +10,6 @@ const storage = multer.diskStorage({
   }
 });
 
-// File filter for images and common document formats
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|gif|webp|bmp|tiff|pdf|doc|docx|txt/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -24,9 +22,8 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Upload middleware – accepts images and docs up to 20MB
 export const uploadProfile = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+  limits: { fileSize: 20 * 1024 * 1024 },
 });

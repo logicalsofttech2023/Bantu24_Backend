@@ -1,9 +1,9 @@
+import bcrypt from "bcrypt";
 import User from "../models/UserModel.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { generateToken, genrateOtp } from "../utils/commonFunctions.js";
-import bcrypt from "bcrypt";
 
 export const registerUser = asyncHandler(async (req, res) => {
   const {
